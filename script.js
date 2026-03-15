@@ -19,6 +19,18 @@ let globalSecondHandCount = 0;
 let selectedInstrument = INSTRUMENTS.PIANO;
 
 
+const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+console.log(`[Device] Running on ${isMobile ? 'Mobile' : 'Desktop'}`);
+
+document.body.addEventListener('touchstart', async () => {
+  if (!toneStarted) {
+    await Tone.start();
+    toneStarted = true;
+    console.log('[Audio] Tone.js unlocked via touch');
+  }
+}, { once: true });
+
+
 const instrumentMenu = document.getElementById('instrument-menu');
 const instrumentButtons = document.querySelectorAll('.toggle-btn[data-instrument]');
 
@@ -33,14 +45,18 @@ resizeCanvas();
 
 async function initWebcam() {
   try {
+    const videoConstraints = isMobile 
+      ? { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } }
+      : { facingMode: 'user', width: { ideal: 1920 }, height: { ideal: 1080 } };
+
     const stream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: 'user', width: { ideal: 1920 }, height: { ideal: 1080 } },
+      video: videoConstraints,
       audio: false,
     });
     video.srcObject = stream;
-    console.log('[Webcam] Stream started');
+    console.log('[webcam] stream started with mobile setup:', isMobile);
   } catch (err) {
-    console.error('[Webcam] Could not access camera:', err);
+    console.error('[webcam] could not access camera:', err);
   }
 }
 initWebcam();
@@ -156,9 +172,9 @@ const hands = new Hands({
 
 hands.setOptions({
   maxNumHands: 2,
-  modelComplexity: 1,
-  minDetectionConfidence: 0.7,
-  minTrackingConfidence: 0.6,
+  modelComplexity: isMobile ? 0 : 1, 
+  minDetectionConfidence: isMobile ? 0.5 : 0.7,
+  minTrackingConfidence: isMobile ? 0.5 : 0.6,
 });
 
 let latestResults = null;
